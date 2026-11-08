@@ -3,11 +3,20 @@ import { getSettings } from './store.js';
 
 const SYSTEM = 'You are a world-class teacher and curriculum designer. You output only the exact line format requested: no markdown, no bullets, no commentary.';
 
+// the free built-in AI rejects parallel requests, so those run one at a time; own keys run up to 4 at once
+export const ownKey = () => { const s = getSettings(); return (s.provider === 'gemini' && !!s.geminiKey) || (s.provider === 'openai' && !!s.openaiKey); };
 let queue = Promise.resolve();
 const serial = (fn) => { const p = queue.then(fn, fn); queue = p.catch(() => {}); return p; };
+let running = 0;
+const waiting = [];
+const limited = async (fn) => {
+  if (running >= 4) await new Promise(r => waiting.push(r));
+  running++;
+  try { return await fn(); } finally { running--; waiting.shift()?.(); }
+};
 
 export function complete(prompt, { maxTokens = 4000, system = SYSTEM } = {}) {
-  return serial(async () => {
+  return (ownKey() ? limited : serial)(async () => {
     let lastErr;
     for (let attempt = 0; attempt < 3; attempt++) {
       try { return await callProvider(prompt, system, maxTokens); }
@@ -284,14 +293,26 @@ export async function generateRoadmap(opts, onStep = () => {}) {
   let cur = [], size = 0;
   for (const t of map.tracks) {
     const share = Math.max(3, Math.round(target * Math.max(1, t.topics.length) / totalTopics));
-    if (cur.length && size + share > 26) { batches.push({ tracks: cur, k: size }); cur = []; size = 0; }
+    if (cur.length && size + share > (ownKey() ? 14 : 26)) { batches.push({ tracks: cur, k: size }); cur = []; size = 0; }
     cur.push(t); size += share;
   }
   if (cur.length) batches.push({ tracks: cur, k: size });
-  for (let i = 0; i < batches.length; i++) {
-    onStep(`Mapping concepts: ${batches[i].tracks.map(t => t.name).join(', ')} (${i + 1} of ${batches.length})…`);
-    try { map = parseRoadmap(await complete(expandPrompt(opts, map, batches[i].tracks, batches[i].k), { maxTokens: 6000 }), map); }
-    catch (e) { if (!map.nodes.length && i === batches.length - 1) throw e; }
+  if (ownKey() && batches.length > 1) {
+    // foundations first so the other modules can link to them, then the rest in parallel
+    onStep(`Mapping concepts: ${batches[0].tracks.map(t => t.name).join(', ')}…`);
+    try { map = parseRoadmap(await complete(expandPrompt(opts, map, batches[0].tracks, batches[0].k), { maxTokens: 6000 }), map); } catch { /* the rest can still work */ }
+    onStep(`Mapping the other ${batches.length - 1} parts at once…`);
+    const base = map;
+    const out = await Promise.allSettled(batches.slice(1).map(b => complete(expandPrompt(opts, base, b.tracks, b.k), { maxTokens: 6000 })));
+    const text = out.filter(r => r.status === 'fulfilled').map(r => r.value).join('\n');
+    if (text) map = parseRoadmap(text, map);
+    else if (!map.nodes.length) throw out.find(r => r.status === 'rejected')?.reason || new Error('The AI returned nothing. Try again.');
+  } else {
+    for (let i = 0; i < batches.length; i++) {
+      onStep(`Mapping concepts: ${batches[i].tracks.map(t => t.name).join(', ')} (${i + 1} of ${batches.length})…`);
+      try { map = parseRoadmap(await complete(expandPrompt(opts, map, batches[i].tracks, batches[i].k), { maxTokens: 6000 }), map); }
+      catch (e) { if (!map.nodes.length && i === batches.length - 1) throw e; }
+    }
   }
   if (map.nodes.length < 3) return singlePass(opts, onStep, target);
   const thin = map.tracks.filter(t => map.nodes.filter(n => n.track === t.id).length < Math.max(3, Math.round(target * Math.max(1, t.topics.length) / totalTopics * 0.6)));

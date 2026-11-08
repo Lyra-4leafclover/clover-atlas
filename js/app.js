@@ -1,5 +1,5 @@
 import * as store from './store.js';
-import { generateRoadmap, generatePack, askAbout, testConnection } from './ai.js';
+import { generateRoadmap, generatePack, askAbout, testConnection, ownKey } from './ai.js';
 import { findResources, aiPicks, count } from './resources.js';
 import { createGraph, layout } from './graph.js';
 import { wikiSummary } from './links.js';
@@ -61,6 +61,8 @@ function providerLabel() {
   return 'Built-in free AI';
 }
 
+const keyTip = () => `<div class="keytip"><span class="kt-ico">⚡</span><div><b>Roadmaps taking a while?</b><span>You're on the shared free AI, which is slow and often busy. Add your own free key (about 1 minute) and roadmaps build several times faster.</span></div><button type="button" class="pill ghost small" data-act="keyGuide">Use my own key</button></div>`;
+
 function renderHome() {
   current = null; closeDrawer(false);
   document.body.dataset.page = 'home';
@@ -85,6 +87,7 @@ function renderHome() {
       </div>
       <div class="chips"><span>Try:</span>${EXAMPLES.map(e => `<button type="button" class="chip" data-ex="${esc(e)}">${esc(e)}</button>`).join('')}</div>
       <p class="ai-note">AI: <b>${esc(providerLabel())}</b> · <button type="button" class="linkish" data-act="settings">change</button></p>
+      ${ownKey() ? '' : keyTip()}
     </form>
   </section>
 
@@ -188,8 +191,8 @@ async function build(opts) {
     <h2>Drawing your roadmap…</h2>
     <p id="step">Reading what you gave me…</p>
     <div class="dots"><i></i><i></i><i></i></div>
-    <p class="muted small">Big maps are built in several passes so nothing is skipped. This takes about 1 to 3 minutes.</p>
-    <button class="pill ghost small" data-act="cancelBuild">Cancel</button>
+    <p class="muted small">${ownKey() ? 'Big maps are built in several passes so nothing is skipped. With your own key this usually takes under a minute.' : 'Big maps are built in several passes so nothing is skipped. On the shared free AI this takes about 1 to 3 minutes.'}</p>
+    <div class="row-btns center"><button class="pill ghost small" data-act="cancelBuild">Cancel</button>${ownKey() ? '' : '<button class="pill ghost small" data-act="keyGuide">Stop and use my own key (faster)</button>'}</div>
   </div>`;
   try {
     const data = await generateRoadmap(opts, (s) => { const el = $('#step'); if (el && token === buildToken) el.textContent = s; });
@@ -579,23 +582,24 @@ function download(name, text) {
 const fileName = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'roadmap';
 
 /* ---------- settings ---------- */
-function openSettings() {
+function openSettings(guide = false) {
   const s = store.getSettings();
   modal.hidden = false;
   modal.innerHTML = `<div class="modal-card settings" role="dialog" aria-label="Settings">
     <div class="dtop"><h2>AI settings</h2><button class="iconbtn" data-act="closeModal" aria-label="Close">${ICON.close}</button></div>
-    <p class="muted">Pick which AI builds your roadmaps. Keys are stored only in this browser and sent only to that AI company.</p>
+    <p class="muted">Pick which AI builds your roadmaps. The built-in one is shared by everyone, so it's slow. Your own key is free, much faster and gives better roadmaps. Keys are stored only in this browser and sent only to that AI company.</p>
     <label class="opt-card"><input type="radio" name="prov" value="auto" ${s.provider === 'auto' ? 'checked' : ''}>
       <div><b>Built-in free AI</b><span>No key needed. Only works when the site runs on its own server (like Vercel). It can be slow or busy at times.</span></div></label>
-    <label class="opt-card"><input type="radio" name="prov" value="gemini" ${s.provider === 'gemini' ? 'checked' : ''}>
+    <label class="opt-card"><input type="radio" name="prov" value="gemini" ${s.provider === 'gemini' || (guide && s.provider === 'auto') ? 'checked' : ''}>
       <div><b>Google Gemini <em class="rec">free · recommended</em></b><span>Fast and smart. Get a free key in about a minute:</span>
-      <ol class="small"><li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with Google.</li><li>Click <b>Create API key</b>, then copy it.</li><li>Paste it below and press <b>Save</b>.</li></ol>
+      <ol class="small"><li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with your Google account.</li><li>If asked, accept the terms. Then click <b>Create API key</b> (top right). If it asks for a project, pick any one or let it make one.</li><li>Click the copy icon next to your new key. It starts with <code>AIza</code>.</li><li>Paste it below, press <b>Test connection</b>, then <b>Save</b>.</li></ol>
       <div class="pf"><input id="gkey" type="password" placeholder="Paste your Gemini key (starts with AIza…)" value="${esc(s.geminiKey)}" autocomplete="off"></div>
       <details class="small"><summary>Advanced</summary><label class="field"><span>Model</span><input id="gmodel" value="${esc(s.geminiModel)}"></label></details></div></label>
     <label class="opt-card"><input type="radio" name="prov" value="openai" ${s.provider === 'openai' ? 'checked' : ''}>
       <div><b>Other AI service</b><span>OpenAI, Groq, OpenRouter or any OpenAI-compatible API.</span>
       <div class="pf"><input id="obase" placeholder="API address" value="${esc(s.openaiBase)}"><input id="okey" type="password" placeholder="API key" value="${esc(s.openaiKey)}" autocomplete="off"><input id="omodel" placeholder="Model name" value="${esc(s.openaiModel)}"></div>
-      <p class="small muted">Groq: <code>https://api.groq.com/openai/v1</code> · OpenRouter: <code>https://openrouter.ai/api/v1</code></p></div></label>
+      <details class="small"><summary><b>Groq</b>: also free and very fast. Steps</summary><ol><li>Open <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> and sign in (Google or email).</li><li>Click <b>Create API Key</b>, give it any name, and copy the key (starts with <code>gsk_</code>). It's only shown once.</li><li>Click <button type="button" class="linkish" data-fill="groq">fill in Groq</button>, paste the key into "API key", then <b>Test connection</b> and <b>Save</b>.</li></ol></details>
+      <details class="small"><summary><b>OpenRouter</b> or <b>OpenAI</b>. Steps</summary><ol><li>OpenRouter: make a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>, then click <button type="button" class="linkish" data-fill="openrouter">fill in OpenRouter</button>. Models ending in <code>:free</code> cost nothing.</li><li>OpenAI: make a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a> (paid), then click <button type="button" class="linkish" data-fill="openai">fill in OpenAI</button>.</li><li>Paste the key, <b>Test connection</b>, <b>Save</b>.</li></ol></details></div></label>
     <div class="row-btns"><button class="pill primary" data-act="saveSettings">Save</button><button class="pill ghost" data-act="testAI">Test connection</button><span id="testres" class="small"></span></div>
     <hr>
     <h3>Your data</h3>
@@ -605,7 +609,20 @@ function openSettings() {
   modal.querySelectorAll('.pf input, details input').forEach(i => i.addEventListener('input', () => {
     i.closest('.opt-card').querySelector('input[type=radio]').checked = true;
   }));
+  modal.querySelectorAll('[data-fill]').forEach(b => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    const [base, model] = PRESETS[b.dataset.fill];
+    $('#obase', modal).value = base; $('#omodel', modal).value = model;
+    b.closest('.opt-card').querySelector('input[type=radio]').checked = true;
+    $('#okey', modal).focus();
+  }));
+  if (guide) setTimeout(() => $('#gkey', modal)?.focus(), 50);
 }
+const PRESETS = {
+  groq: ['https://api.groq.com/openai/v1', 'llama-3.3-70b-versatile'],
+  openrouter: ['https://openrouter.ai/api/v1', 'meta-llama/llama-3.3-70b-instruct:free'],
+  openai: ['https://api.openai.com/v1', 'gpt-4o-mini'],
+};
 function readSettingsForm() {
   store.setSettings({
     provider: modal.querySelector('input[name=prov]:checked')?.value || 'auto',
@@ -623,6 +640,7 @@ document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const act = b.dataset.act;
   if (act === 'settings') { e.preventDefault(); openSettings(); }
+  else if (act === 'keyGuide') { e.preventDefault(); buildToken++; openSettings(true); }
   else if (act === 'closeModal' || act === 'cancelBuild') closeModal();
   else if (act === 'closeDrawer') closeDrawer();
   else if (act === 'toggleDone') toggleDone(drawerNode);
@@ -630,7 +648,7 @@ document.addEventListener('click', async (e) => {
   else if (act === 'exportMap') { const m = current.map; download(`${fileName(m.title)}.json`, JSON.stringify(m, null, 1)); }
   else if (act === 'exportAll') download(`clover-atlas-backup-${new Date().toISOString().slice(0, 10)}.json`, store.exportAll());
   else if (act === 'deleteMap') { if (confirm(`Delete "${current.map.title}"? This can't be undone.`)) { store.deleteMap(current.map.id); location.hash = '#/'; } }
-  else if (act === 'saveSettings') { readSettingsForm(); toast('Settings saved'); closeModal(); }
+  else if (act === 'saveSettings') { readSettingsForm(); toast('Settings saved'); closeModal(); if (document.body.dataset.page === 'home') renderHome(); }
   else if (act === 'addSample') { store.newMap(structuredClone(EXAMPLE), EXAMPLE.source); toast('Sample added'); closeModal(); if (location.hash.length > 2) location.hash = '#/'; else renderHome(); }
   else if (act === 'testAI') {
     readSettingsForm();

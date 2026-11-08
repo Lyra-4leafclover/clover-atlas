@@ -65,7 +65,7 @@ Give Clover Atlas anything: *"DevOps"*, *"organic chemistry"*, a course name, or
 ## ✍️ &nbsp;How to use it
 
 1. On the home page, type a topic or paste your syllabus. You can also upload a `.txt`, `.md` or `.pdf` file.
-2. Pick your level and a size: **Compact** (about 30 concepts), **Full** (about 55) or **Deep** (about 90). Then click **Build my roadmap**. Big maps take 1 to 3 minutes.
+2. Pick your level and a size: **Compact** (about 30 concepts), **Full** (about 55) or **Deep** (about 90). Then click **Build my roadmap**. On the shared free AI, big maps take 1 to 3 minutes. With your own free key (see below) it's much quicker.
 3. Click any concept to open it. **Learn** explains it, **Resources** has the links, **Practice** has questions and flashcards, and **Notes** is yours.
 4. Click **Mark as done** when you finish a concept. The next ones unlock.
 
@@ -80,13 +80,30 @@ When you open a concept's **Resources** tab, the site's server looks things up f
 
 Each concept is saved once it has loaded, so opening it again is instant. **Refresh resources** fetches a new set.
 
-## 🤖 &nbsp;AI options
+## 🔑 &nbsp;Use your own free key (much faster)
 
-Click **Settings** on the site.
+Out of the box, everyone shares one free public AI. It needs no key, but it's slow (a Full roadmap takes about 1 to 3 minutes) and sometimes busy. Anyone using the site can add **their own free key** instead. Roadmaps then build several times faster, because the modules are made at the same time instead of one by one, and the maps are better too.
 
-- **Built-in** (default): uses a free public AI with no key. It's slower and simpler.
-- **Your Gemini key** (recommended): faster and better maps. Get a free key at https://aistudio.google.com/apikey and paste it in. It's stored only in your browser.
-- **OpenAI-compatible:** any key and base URL (OpenAI, OpenRouter, Groq and others).
+Click **Use my own key** on the home page (or **Settings** at the top). The steps are shown right there:
+
+<p align="center"><img src="docs/settings.png" alt="AI settings with step-by-step instructions for a free Gemini key" width="70%"></p>
+
+**Google Gemini (free, recommended)**
+1. Open https://aistudio.google.com/apikey and sign in with your Google account.
+2. If asked, accept the terms. Then click **Create API key**. If it asks for a project, pick any one or let it make one.
+3. Copy the key. It starts with `AIza`.
+4. In Clover Atlas, paste it into the Gemini box, press **Test connection**, then **Save**.
+
+**Groq (free, very fast)**
+1. Open https://console.groq.com/keys and sign in.
+2. Click **Create API Key**, give it any name and copy it. It starts with `gsk_` and is only shown once.
+3. In Settings under **Other AI service**, click **fill in Groq**, paste the key, then **Test connection** and **Save**.
+
+**OpenRouter or OpenAI:** the same steps, with keys from https://openrouter.ai/keys (models ending in `:free` cost nothing) or https://platform.openai.com/api-keys (paid).
+
+Keys are saved only in that person's browser and sent straight to the AI company. They never go to the site's server.
+
+**Site owner tip:** to give *everyone* Gemini without them needing a key, add `GEMINI_API_KEY` in Vercel under Project → Settings → Environment Variables, then redeploy. That key is shared by all visitors and counts toward your free Gemini limits.
 
 ## 🔒 &nbsp;Your data
 
@@ -94,7 +111,7 @@ There are no accounts. Your roadmaps, ticks and notes are saved in your own brow
 
 ## 🚀 &nbsp;Make your own copy
 
-**On Vercel (free):** click **Deploy with Vercel** above, sign in with GitHub, then click **Deploy**. Optional: under Project → Settings → Environment Variables, add `GEMINI_API_KEY` so everyone gets the better AI without a key. Then redeploy.
+**On Vercel (free):** click **Deploy with Vercel** above, sign in with GitHub, then click **Deploy**. Optionally, add `GEMINI_API_KEY` too (see the site owner tip above).
 
 **On your computer:** you need Python 3. Open a terminal in this folder and run:
 

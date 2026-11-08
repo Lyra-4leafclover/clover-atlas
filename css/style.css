@@ -68,6 +68,15 @@ h1 em { font-style: italic; color: var(--sage-d); }
 .chip { border: 1px solid var(--line); background: #f8f1e3; border-radius: 99px; padding: 4px 11px; font-size: 13px; cursor: pointer; color: var(--ink2); }
 .chip:hover { border-color: var(--sage); color: var(--ink); background: #eef5ec; }
 .ai-note { margin: 12px 2px 0; font-size: 13px; color: var(--muted); }
+.keytip { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: #fbf3d9; border: 1px solid #efdfa8; }
+.keytip > div { flex: 1 1 260px; min-width: 0; }
+.keytip b { display: block; font-size: 14.5px; }
+.keytip span { font-size: 13.5px; color: var(--ink2); }
+.keytip .kt-ico { font-size: 20px; }
+.row-btns.center { justify-content: center; }
+.opt-card details { margin-top: 8px; color: var(--ink2); }
+.opt-card details summary { cursor: pointer; padding: 2px 0; }
+.opt-card details ol { padding-left: 18px; margin: 6px 0; }
 
 /* sections */
 .section { max-width: 1180px; margin: 0 auto; padding: 40px clamp(14px, 4vw, 40px) 10px; }
@@ -319,7 +328,7 @@ body[data-page=map] .mlist:not([hidden]) ~ .nextup { display: none; }
 .opt-card:has(input[type=radio]:checked) { border-color: var(--sage); background: #f5faf3; }
 .opt-card input[type=radio] { margin-top: 5px; accent-color: var(--sage-d); }
 .opt-card > div { flex: 1; min-width: 0; }
-.opt-card b { display: block; }
+.opt-card > div > b { display: block; }
 .opt-card > div > span { font-size: 14px; color: var(--ink2); }
 .opt-card ol { padding-left: 18px; margin: 6px 0; color: var(--ink2); }
 .rec { font-style: normal; font-size: 11px; background: var(--butter); color: #6d5717; padding: 1px 7px; border-radius: 99px; margin-left: 4px; vertical-align: 2px; }
