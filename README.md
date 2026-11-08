@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLyra-4leafclover%2Fclover-atlas&project-name=clover-atlas&repository-name=clover-atlas"><img src="https://vercel.com/button" alt="Deploy with Vercel"></a>
+  <a href="https://clover-atlas-eight.vercel.app"><strong>✨ Open Clover Atlas ✨</strong></a>
 </p>
 
 <p align="center">
@@ -103,27 +103,11 @@ Click **Use my own key** on the home page (or **Settings** at the top). The step
 
 Keys are saved only in that person's browser and sent straight to the AI company. They never go to the site's server.
 
-**Site owner tip:** to give *everyone* Gemini without them needing a key, add `GEMINI_API_KEY` in Vercel under Project → Settings → Environment Variables, then redeploy. That key is shared by all visitors and counts toward your free Gemini limits.
-
 ## 🔒 &nbsp;Your data
 
 There are no accounts. Your roadmaps, ticks and notes are saved in your own browser. Use **Backup** on the home page (or **Save file** on one roadmap) to download them, and **Import** to open them on another device. **Share** copies a link that gives a friend their own copy.
 
-## 🚀 &nbsp;Make your own copy
-
-**On Vercel (free):** click **Deploy with Vercel** above, sign in with GitHub, then click **Deploy**. Optionally, add `GEMINI_API_KEY` too (see the site owner tip above).
-
-**On your computer:** you need Python 3. Open a terminal in this folder and run:
-
-```
-python3 server.py
-```
-
-Then open http://localhost:8000.
-
-A plain static host like GitHub Pages or Neocities won't work here, because the resource finder and the AI run on the server.
-
-## 🎨 &nbsp;Make it yours
+## 🗂️ &nbsp;What's inside
 
 | File | What it is |
 | --- | --- |
@@ -134,8 +118,8 @@ A plain static host like GitHub Pages or Neocities won't work here, because the 
 | `js/resources.js` | How free and paid resources are gathered for a concept. |
 | `js/example.js` | The built-in DevOps sample. |
 | `js/store.js` | Saving in the browser, backups and share links. |
-| `api/ai.js`, `api/find.js` | The server parts on Vercel (AI and the resource finder). |
-| `server.py` | The same server parts for running it on your computer. |
+| `api/ai.js`, `api/find.js` | The server parts (AI and the resource finder). |
+| `server.py` | The same server parts, in Python. |
 | `art/` | Watercolor artwork and icon. |
 
 <br>
