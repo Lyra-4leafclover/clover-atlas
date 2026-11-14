@@ -43,7 +43,7 @@ export default async function handler(req, res) {
   }
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const task = TASKS[body.task];
+    const task = Object.hasOwn(TASKS, body.task) ? TASKS[body.task] : null;
     if (!task) return res.status(400).json({ error: 'Unknown task' });
     const prompt = task.fixed || (task.build ? task.build(body.fields) : String(body.prompt || '').slice(0, task.prompt));
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
