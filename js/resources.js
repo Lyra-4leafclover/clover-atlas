@@ -73,7 +73,7 @@ export async function aiPicks(map, node, res) {
 Only resources you are SURE exist, each with its exact, full URL: official documentation pages, famous articles and guides, free courses (MIT OCW, Khan Academy, freeCodeCamp, Coursera, university pages), interactive tutorials, free online books, practice sites, plus a few paid courses and books. No YouTube links.
 Output EXACTLY these lines:
 FREE: <docs|article|course|book|interactive|practice|tool> | <exact title> | <exact url>   (12-16 lines)
-PAID: <course|book|tool> | <exact title> | <exact url> | <price hint, e.g. ~$15 or subscription>   (3-5 lines)`, { maxTokens: 3000 });
+PAID: <course|book|tool> | <exact title> | <exact url> | <price hint, e.g. ~$15 or subscription>   (3-5 lines)`, { maxTokens: 3000, task: 'resources' });
   const picks = [];
   for (const raw of String(text).split(/\r?\n/)) {
     const m = raw.replace(/[*`]/g, '').trim().match(/^[-•\d.\s]*(FREE|PAID)\s*:\s*(.+)$/i);

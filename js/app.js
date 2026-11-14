@@ -477,7 +477,7 @@ function renderTab() {
       ${p.steps.length ? `<div class="block"><h4>Study plan</h4><ol class="steps">${p.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>` : ''}
       ${p.mistakes.length ? `<div class="block warn"><h4>Common mistakes</h4><ul>${p.mistakes.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}
       <div class="block ask"><h4>Still confused? Ask anything</h4>
-        <form id="askf"><input id="askq" placeholder="e.g. what's the difference between X and Y?" autocomplete="off"><button class="pill primary small">Ask</button></form>
+        <form id="askf"><input id="askq" maxlength="400" placeholder="e.g. what's the difference between X and Y?" autocomplete="off"><button class="pill primary small">Ask</button></form>
         <div id="answers">${(n.qa || []).map(qaHtml).join('')}</div>
       </div>`) + `<div class="block wiki" id="wiki"></div>
       <button class="pill ghost small wide" data-act="expand">${ICON.branch}<span>Break this concept into its own roadmap</span></button>

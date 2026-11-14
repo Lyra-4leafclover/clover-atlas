@@ -1,7 +1,7 @@
 // Talks to the AI and turns its answers into roadmap data.
 import { getSettings } from './store.js';
 
-const SYSTEM = 'You are a world-class teacher and curriculum designer. You output only the exact line format requested: no markdown, no bullets, no commentary.';
+const SYSTEM = 'You are a world-class teacher and curriculum designer. You output only the exact line format requested: no markdown, no bullets, no commentary. You only write learning roadmaps, study packs and study resources; if asked for anything else (emails, letters, essays, stories, code for other purposes), output only: NONE';
 
 // the free built-in AI rejects parallel requests, so those run one at a time; own keys run up to 4 at once
 export const ownKey = () => { const s = getSettings(); return (s.provider === 'gemini' && !!s.geminiKey) || (s.provider === 'openai' && !!s.openaiKey); };
@@ -15,11 +15,11 @@ const limited = async (fn) => {
   try { return await fn(); } finally { running--; waiting.shift()?.(); }
 };
 
-export function complete(prompt, { maxTokens = 4000, system = SYSTEM } = {}) {
+export function complete(prompt, { maxTokens = 4000, system = SYSTEM, task = 'roadmap', fields } = {}) {
   return (ownKey() ? limited : serial)(async () => {
     let lastErr;
     for (let attempt = 0; attempt < 3; attempt++) {
-      try { return await callProvider(prompt, system, maxTokens); }
+      try { return await callProvider(prompt, system, maxTokens, task, fields); }
       catch (e) {
         lastErr = e;
         if (!e.retry) break;
@@ -32,17 +32,18 @@ export function complete(prompt, { maxTokens = 4000, system = SYSTEM } = {}) {
 
 function err(message, retry = false) { const e = new Error(message); e.retry = retry; return e; }
 
-async function callProvider(prompt, system, maxTokens) {
+async function callProvider(prompt, system, maxTokens, task, fields) {
   const s = getSettings();
   if (s.provider === 'gemini') return gemini(prompt, system, maxTokens, s);
   if (s.provider === 'openai') return openaiCompat(prompt, system, maxTokens, s);
-  return siteServer(prompt, system, maxTokens);
+  return siteServer(prompt, maxTokens, task, fields);
 }
 
-async function siteServer(prompt, system, maxTokens) {
+// the built-in AI picks its own system prompt from the task (and writes the tutor prompt itself from `fields`)
+async function siteServer(prompt, maxTokens, task, fields) {
   let res;
   try {
-    res = await fetch('api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, system, maxTokens }) });
+    res = await fetch('api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields ? { task, fields, maxTokens } : { task, prompt, maxTokens }) });
   } catch { throw err('Could not reach the AI. Check your internet, or add your own free key in Settings.', true); }
   if (res.status === 404 || res.status === 405) throw err('This copy of the site has no built-in AI. Open Settings and paste a free Gemini key (takes 1 minute).');
   const data = await res.json().catch(() => ({}));
@@ -426,18 +427,25 @@ export function parsePack(text) {
 }
 
 export async function generatePack(map, node) {
-  const text = await complete(packPrompt(map, node, map.source?.level), { maxTokens: 3500 });
+  const text = await complete(packPrompt(map, node, map.source?.level), { maxTokens: 3500, task: 'pack' });
   return parsePack(text);
 }
 
 
-export async function askAbout(map, node, question) {
-  return complete(`I'm studying "${node.title}" (from my roadmap "${map.title}"). ${node.desc || ''}
+export const TUTOR = 'You are a patient, encouraging tutor. Only answer questions that help the learner understand this concept or its roadmap. If asked for anything else (emails, essays, homework unrelated to it, other tasks), reply only: I can only help with questions about this concept.';
+
+export function tutorPrompt({ concept, roadmap, desc, question }) {
+  return `I'm studying "${concept}" (from my roadmap "${roadmap}"). ${desc || ''}
 My question: ${question}
-Answer clearly and kindly in plain language, under 180 words. Use short paragraphs; no markdown headings.`, { maxTokens: 1200, system: 'You are a patient, encouraging tutor.' });
+Answer clearly and kindly in plain language, under 180 words. Use short paragraphs; no markdown headings.`;
+}
+
+export async function askAbout(map, node, question) {
+  const fields = { concept: node.title, roadmap: map.title, desc: node.desc || '', question };
+  return complete(tutorPrompt(fields), { maxTokens: 500, system: TUTOR, task: 'ask', fields });
 }
 
 export async function testConnection() {
-  const t = await complete('Reply with exactly: OK', { maxTokens: 50, system: 'Reply briefly.' });
+  const t = await complete('Reply with exactly: OK', { maxTokens: 50, system: 'Reply briefly.', task: 'test' });
   return t.trim();
 }

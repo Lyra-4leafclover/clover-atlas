@@ -10,6 +10,17 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 KEY = os.environ.get('GEMINI_API_KEY', '')
 MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 
+TEACHER = 'You are a world-class teacher and curriculum designer. You output only the exact line format requested: no markdown, no bullets, no commentary. You only write learning roadmaps, study packs and study resources; if asked for anything else (emails, letters, essays, stories, code for other purposes), output only: NONE'
+TUTOR = 'You are a patient, encouraging tutor. Only answer questions that help the learner understand this concept or its roadmap. If asked for anything else (emails, essays, homework unrelated to it, other tasks), reply only: I can only help with questions about this concept.'
+# task -> (system prompt, max prompt chars, max tokens), same as api/ai.js
+TASKS = {
+    'roadmap': (TEACHER, 30000, 6000),
+    'pack': (TEACHER, 6000, 3500),
+    'resources': (TEACHER, 4000, 3000),
+    'ask': (TUTOR, 1200, 500),
+    'test': ('Reply briefly.', 100, 20),
+}
+
 
 def post(url, payload, headers):
     req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={'Content-Type': 'application/json', **headers})
@@ -233,11 +244,23 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(404, {'error': 'Not found'})
         try:
             body = json.loads(self.rfile.read(int(self.headers.get('Content-Length', 0)) or 0) or b'{}')
-            prompt = str(body.get('prompt', ''))[:30000]
+            task = TASKS.get(body.get('task'))
+            if not task:
+                return self.send_json(400, {'error': 'Unknown task'})
+            system, limit, cap = task
+            if body.get('task') == 'test':
+                prompt = 'Reply with exactly: OK'
+            elif body.get('task') == 'ask':
+                f = body.get('fields') or {}
+                prompt = (f'I\'m studying "{str(f.get("concept", ""))[:120]}" (from my roadmap "{str(f.get("roadmap", ""))[:120]}"). {str(f.get("desc", ""))[:400]}\n'
+                          f'My question: {str(f.get("question", ""))[:400]}\n'
+                          'Answer clearly and kindly in plain language, under 180 words. Use short paragraphs; no markdown headings.') if f.get('question') else ''
+            else:
+                prompt = str(body.get('prompt', ''))[:limit]
             if not prompt:
                 return self.send_json(400, {'error': 'Missing prompt'})
-            max_tokens = min(max(int(body.get('maxTokens') or 2000), 50), 8000)
-            self.send_json(200, {'text': ask(prompt, str(body.get('system', ''))[:2000], max_tokens)})
+            max_tokens = min(max(int(body.get('maxTokens') or cap), 20), cap)
+            self.send_json(200, {'text': ask(prompt, system, max_tokens)})
         except urllib.error.HTTPError as e:
             self.send_json(429 if e.code == 429 else 502, {'error': 'The free AI is busy right now. Try again in a moment, or add your own free key in Settings.'})
         except Exception as e:
