@@ -2,6 +2,8 @@
 // POST { queries: [{ key, kind: 'video' | 'web', q, n }] } -> { results: { key: [...] } }
 // Videos from YouTube search; articles, Q&A, repos and books from the Wikipedia, Hacker News,
 // Stack Exchange, GitHub and Open Library APIs; kind 'check' verifies AI-suggested links. No keys needed.
+import { sameSite, rateLimited } from './_guard.js';
+
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
 
 const unescape = (s) => String(s || '')
@@ -103,10 +105,21 @@ async function books(q, n) {
   return out.slice(0, n * 2);
 }
 
+// never let the link checker reach this server's own machine or private networks
+function privateHost(h) {
+  h = h.toLowerCase().replace(/^\[|\]$/g, '');
+  if (!h.includes('.') || /^(localhost|.*\.(localhost|local|internal|lan|home))$/.test(h)) return true;
+  if (h.includes(':')) return true;
+  const ip = h.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (!ip) return /^[\d.]+$|^0x/i.test(h);
+  const [a, b] = [+ip[1], +ip[2]];
+  return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
+}
+
 async function check(url) {
   try {
     const u = new URL(url);
-    if (!/^https?:$/.test(u.protocol)) return { ok: false };
+    if (!/^https?:$/.test(u.protocol) || privateHost(u.hostname)) return { ok: false };
     const r = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'text/html,*/*', 'Accept-Language': 'en-US' }, redirect: 'follow', signal: AbortSignal.timeout(8000) });
     if (r.status === 404 || r.status === 410) return { ok: false };
     if (!r.ok) return { ok: null };
@@ -134,6 +147,8 @@ async function run(x) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
+  if (!sameSite(req)) return res.status(403).json({ error: 'The resource finder only works on the Clover Atlas site itself.' });
+  if (rateLimited(req, 'find', 60, 10 * 60 * 1000)) return res.status(429).json({ error: 'Too many searches just now. Wait a few minutes.' });
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const queries = (Array.isArray(body.queries) ? body.queries : []).filter(x => x && typeof x === 'object').slice(0, 12);
